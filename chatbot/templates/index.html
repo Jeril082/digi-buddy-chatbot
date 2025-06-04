@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DigiBuddy Chatbot</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+  <link rel="icon" href="{{ url_for('static', filename='favicon.ico') }}">
+  <style>
+    /* Basic tab content styling - ensure only one is visible at a time */
+    .tab-content {
+      display: none;
+      padding: 1rem;
+      background-color: #f1f1f1;
+      border-radius: 8px;
+      margin: 1rem 0;
+    }
+    .tab-content.active {
+      display: block;
+    }
+
+    /* FAQ specific styling for initial state - will be enhanced in styles.css */
+    .faq-item {
+        margin-bottom: 10px;
+        border: 1px solid #ddd;
+        border-radius: 8px;
+        overflow: hidden; /* Ensures content doesn't spill during collapse */
+    }
+
+    .faq-question {
+        background-color: #e9e9e9;
+        padding: 12px 15px;
+        cursor: pointer;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        font-weight: bold;
+        color: #333;
+        border-bottom: 1px solid #ddd; /* Separator */
+    }
+
+    .faq-question:hover {
+        background-color: #e0e0e0;
+    }
+
+    .faq-question h3 {
+        margin: 0;
+        font-size: 1.1em;
+    }
+
+    .toggle-icon {
+        font-size: 1.2em;
+        transition: transform 0.3s ease-in-out; /* Smooth rotation for icon */
+    }
+
+    .faq-answer {
+        background-color: #fcfcfc;
+        padding: 0 15px; /* No padding when collapsed */
+        max-height: 0; /* Initially hidden by collapsing height */
+        overflow: hidden;
+        transition: max-height 0.3s ease-out, padding 0.3s ease-out; /* Smooth slide effect */
+        color: #555;
+    }
+
+    .faq-answer.active {
+        max-height: 200px; /* Adjust based on expected max answer height */
+        padding: 10px 15px; /* Padding when expanded */
+    }
+
+    /* Icon rotation when active */
+    .faq-question.active .toggle-icon {
+        transform: rotate(45deg); /* Rotate + to become X or similar */
+    }
+
+    /* Styles for tab buttons */
+    .chatbox-navigation {
+        display: flex;
+        flex-wrap: wrap; /* Allows buttons to wrap on smaller screens */
+        justify-content: center;
+        gap: 8px; /* Space between buttons */
+        margin-bottom: 1rem;
+    }
+
+    .tab-button {
+        background-color: #f0f0f0;
+        border: 1px solid #ccc;
+        border-radius: 20px; /* More rounded pills */
+        padding: 8px 15px;
+        cursor: pointer;
+        font-size: 0.9em;
+        color: #555;
+        transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
+    }
+
+    .tab-button:hover {
+        background-color: #e0e0e0;
+        border-color: #a0a0a0;
+    }
+
+    .tab-button.active {
+        background-color: #007bff; /* DigiLocker blue */
+        color: white;
+        border-color: #007bff;
+        font-weight: bold;
+    }
+
+    /* Chatbox body styling for better appearance */
+    .chatbox-body {
+        flex-grow: 1; /* Allows it to take available space */
+        overflow-y: auto; /* Enables scrolling for chat messages */
+        padding: 15px;
+        background-color: #f9f9f9;
+        border-radius: 8px;
+        margin-bottom: 15px;
+        display: flex;
+        flex-direction: column;
+        gap: 10px; /* Space between messages */
+    }
+
+    .chat-message {
+        padding: 10px 15px;
+        border-radius: 15px;
+        max-width: 80%;
+        word-wrap: break-word;
+    }
+
+    .bot-message {
+        background-color: #e0f7fa; /* Light blue for bot */
+        align-self: flex-start; /* Align to left */
+        border-bottom-left-radius: 5px; /* Sharper corner on one side */
+    }
+
+    .user-message {
+        background-color: #dcedc8; /* Light green for user */
+        align-self: flex-end; /* Align to right */
+        border-bottom-right-radius: 5px; /* Sharper corner on one side */
+    }
+
+    .chatbox-footer {
+        display: flex;
+        gap: 10px;
+        padding: 10px 0;
+        border-top: 1px solid #eee;
+    }
+
+    .chatbox-footer input {
+        flex-grow: 1;
+        padding: 10px 15px;
+        border: 1px solid #ccc;
+        border-radius: 20px;
+        outline: none;
+        font-size: 1em;
+    }
+
+    .chatbox-footer button {
+        background-color: #28a745; /* Green for send */
+        color: white;
+        border: none;
+        border-radius: 20px;
+        padding: 10px 20px;
+        cursor: pointer;
+        font-size: 1em;
+        transition: background-color 0.3s ease;
+    }
+
+    .chatbox-footer button:hover {
+        background-color: #218838;
+    }
+
+    /* General chatbox container */
+    .chatbox {
+        display: flex;
+        flex-direction: column;
+        width: 100%;
+        max-width: 600px; /* Max width for desktop */
+        height: 80vh; /* Max height for desktop */
+        min-height: 400px; /* Minimum height */
+        margin: 20px auto;
+        border: 1px solid #ccc;
+        border-radius: 10px;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        background-color: white;
+        overflow: hidden; /* Ensures rounded corners are respected */
+    }
+
+    .chatbox-header {
+        background-color: #007bff; /* DigiLocker blue */
+        color: white;
+        padding: 15px 20px;
+        border-top-left-radius: 9px;
+        border-top-right-radius: 9px;
+        text-align: center;
+    }
+
+    .chatbox-header h2 {
+        margin: 0;
+        font-size: 1.4em;
+    }
+
+    /* Responsive adjustments */
+    @media (max-width: 768px) {
+        .chatbox {
+            width: 95%;
+            height: 90vh;
+            margin: 10px auto;
+        }
+        .chatbox-navigation {
+            flex-direction: column; /* Stack buttons on small screens */
+            align-items: stretch;
+        }
+        .tab-button {
+            width: 100%; /* Full width buttons */
+        }
+    }
+  </style>
+</head>
+<body>
+  <div class="chatbox">
+    <div class="chatbox-header">
+      <h2>DigiBuddy 👋</h2>
+    </div>
+
+    <div class="chatbox-navigation">
+      <button class="tab-button" data-tab="learnBasics">Learn Basics</button>
+      <button class="tab-button active" data-tab="askQuestion">Ask a Question</button> <button class="tab-button" data-tab="getHelp">Get Help</button>
+      <button class="tab-button" data-tab="faq">FAQ</button>
+      <button class="tab-button" data-tab="tutorial">Tutorials</button>
+      <button class="tab-button" data-tab="troubleshoot">Troubleshooting</button>
+    </div>
+
+    <div id="learnBasics" class="tab-content">
+      <p>Here you'll find basic information to get started with DigiLocker.</p>
+    </div>
+    <div id="askQuestion" class="tab-content active"> <p>You can ask me any question related to DigiLocker.</p>
+      <div class="chatbox-body" id="chatboxBody">
+        <div class="chat-message bot-message">
+          <p>Hi! I'm DigiBuddy, your tech-savvy companion. Ask me anything!</p>
+        </div>
+      </div>
+      <div class="chatbox-footer">
+        <input type="text" id="userInput" placeholder="Type a message..." autofocus>
+        <button id="sendBtn">Send</button>
+      </div>
+    </div>
+    <div id="getHelp" class="tab-content">
+      <p>Need help? You're in the right place!</p>
+    </div>
+    <div id="faq" class="tab-content">
+      <h2>Frequently Asked Questions</h2>
+      <div id="faq-container">
+        <p>Loading FAQs...</p> </div>
+      <p>Can't find your answer? Try asking me directly in the "Ask a Question" tab!</p>
+    </div>
+    <div id="tutorial" class="tab-content">
+      <p>Here you will find helpful tutorials to guide you through DigiLocker features.</p>
+    </div>
+    <div id="troubleshoot" class="tab-content">
+      <p>Having trouble? Find common issues and solutions here.</p>
+    </div>
+
+  </div>
+
+  <script>
+    // Tab button functionality
+    document.addEventListener('DOMContentLoaded', () => {
+        const tabButtons = document.querySelectorAll('.tab-button');
+        const tabContents = document.querySelectorAll('.tab-content');
+
+        tabButtons.forEach(button => {
+            button.addEventListener('click', () => {
+                const targetId = button.getAttribute('data-tab');
+
+                // Remove 'active' class from all buttons and content
+                tabButtons.forEach(btn => btn.classList.remove('active'));
+                tabContents.forEach(tab => tab.classList.remove('active'));
+
+                // Add 'active' class to the clicked button and its corresponding content
+                button.classList.add('active');
+                document.getElementById(targetId).classList.add('active');
+
+                // If the FAQ tab is activated, try to fetch/display FAQs
+                if (targetId === 'faq' && typeof fetchAndDisplayFAQs === 'function') {
+                    fetchAndDisplayFAQs();
+                }
+            });
+        });
+
+        // Initialize the correct tab on load
+        const initialActiveTabButton = document.querySelector('.tab-button.active');
+        if (initialActiveTabButton) {
+            const initialTargetId = initialActiveTabButton.getAttribute('data-tab');
+            document.getElementById(initialTargetId).classList.add('active');
+            // If the initial active tab is FAQ, load FAQs
+            if (initialTargetId === 'faq' && typeof fetchAndDisplayFAQs === 'function') {
+                fetchAndDisplayFAQs();
+            }
+        } else {
+            // Fallback: if no active tab is set, activate 'askQuestion'
+            document.getElementById('askQuestion').classList.add('active');
+            document.querySelector('.tab-button[data-tab="askQuestion"]').classList.add('active');
+        }
+    });
+
+  </script>
+
+  <script src="{{ url_for('static', filename='script.js') }}"></script>
+</body>
+</html>
