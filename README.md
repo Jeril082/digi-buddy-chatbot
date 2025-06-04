@@ -53,5 +53,16 @@ digi-buddy/
 
  - pip install -r requirements.txt
 
+## 🧠 Dependencies
+In requirements.txt:
+
+opencv-python
+face_recognition
+numpy
+
+## 👨‍💻 Author
+Jeril Joseph
+Cybersecurity & AI Enthusiast
+
 
  
